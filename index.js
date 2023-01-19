@@ -19,8 +19,9 @@ app.listen(port, () => {
 
 app.get('/how-long-to-beat', (request, response) => {
   const searchTerm = request.query.title;
+  const year = request.query.year;
 
-  getHLTBInformation(searchTerm).then(result => {
+  getHLTBInformation(searchTerm, year).then(result => {
     response.status(200).send(result);
   }).catch((error) => {
     if (error.name === 'FetchError') {
@@ -31,7 +32,7 @@ app.get('/how-long-to-beat', (request, response) => {
   });
 });
 
-const getHLTBInformation = async (searchTerm) => {
+const getHLTBInformation = async (searchTerm, year) => {
   const response = await fetch(`https://www.howlongtobeat.com/api/search`, {
     method: 'POST',
     headers: {
@@ -52,6 +53,10 @@ const getHLTBInformation = async (searchTerm) => {
           "rangeTime": {
             "min": 0,
             "max": 0
+          },
+          rangeYear: {
+            min: [year],
+            max: [year]
           },
           "gameplay": {
             "perspective": "",
