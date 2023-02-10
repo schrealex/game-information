@@ -54,48 +54,49 @@ const getHLTBInformation = async (searchTerm, year) => {
       'Referer': 'https://howlongtobeat.com/',
     },
     body: JSON.stringify({
-      "searchType": "games",
-      "searchTerms": [searchTerm],
-      "searchPage": 1,
-      "size": 20,
-      "searchOptions": {
-        "games": {
-          "userId": 0,
-          "platform": "",
-          "sortCategory": "popular",
-          "rangeCategory": "main",
-          "rangeTime": {
-            "min": 0,
-            "max": 0
+      'searchType': 'games',
+      'searchTerms': [searchTerm],
+      'searchPage': 1,
+      'size': 20,
+      'searchOptions': {
+        'games': {
+          'userId': 0,
+          'platform': '',
+          'sortCategory': 'popular',
+          'rangeCategory': 'main',
+          'rangeTime': {
+            'min': 0,
+            'max': 0
           },
           rangeYear: {
             min: [year],
             max: [year]
           },
-          "gameplay": {
-            "perspective": "",
-            "flow": "",
-            "genre": ""
+          'gameplay': {
+            'perspective': '',
+            'flow': '',
+            'genre': ''
           },
-          "modifier": ""
+          'modifier': ''
         },
-        "users": {
-          "sortCategory": "postcount"
+        'users': {
+          'sortCategory': 'postcount'
         },
-        "filter": "",
-        "sort": 0,
-        "randomizer": 0
+        'filter': '',
+        'sort': 0,
+        'randomizer': 0
       }
     })
-  })
+  });
   return await response.json();
-}
+};
 
 const getMetacriticInformation = async (searchTerm) => {
+  try {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
-    let listPageData = [];
+    const listPageData = [];
 
     await page.goto(`https://www.metacritic.com/search/game/${searchTerm}/results`, { waitUntil: 'load' });
 
@@ -117,8 +118,12 @@ const getMetacriticInformation = async (searchTerm) => {
           pageUrl: url.trim()
         });
         searchResultsVisible = index < (gameResults.length - 1);
+        console.log({ searchResultsVisible, listPageData });
       }
     }
     await browser.close();
-    return listPageData;
-}
+    return await JSON.parse(JSON.stringify(listPageData));
+  } catch (error) {
+    console.log(error);
+  }
+};
