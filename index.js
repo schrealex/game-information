@@ -1,7 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
-const puppeteer = require('puppeteer');
+
+let chromium = {};
+let puppeteer;
+if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+  // running on the Vercel platform.
+  chromium = require('chrome-aws-lambda');
+  puppeteer = require('puppeteer-core');
+} else {
+  // running locally.
+  puppeteer = require('puppeteer');
+}
 
 const app = express();
 const port = 3000;
@@ -95,11 +105,23 @@ const getHLTBInformation = async (searchTerm, year) => {
 };
 
 const getMetacriticInformation = async (searchTerm) => {
-  try {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+  let browser = null;
+  const listPageData = [];
 
-    const listPageData = [];
+  try {
+    if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+      browser = await puppeteer.launch({
+        args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath,
+        headless: true,
+        ignoreHTTPSErrors: true,
+      });
+    } else {
+      browser = await puppeteer.launch();
+    }
+
+    const page = await browser.newPage();
 
     await page.goto(`https://www.metacritic.com/search/game/${searchTerm}/results`, { waitUntil: 'load' });
 
@@ -128,9 +150,13 @@ const getMetacriticInformation = async (searchTerm) => {
         console.log({ listPageData });
       }
     }
-    await browser.close();
-    return listPageData;
   } catch (error) {
     console.log(error);
+    return error;
+  } finally {
+    // if (browser !== null) {
+    //   await browser.close();
+    // }
   }
+  return listPageData;
 };
