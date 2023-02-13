@@ -45,12 +45,9 @@ app.get('/how-long-to-beat', (request, response) => {
 app.get('/metacritic', (request, response) => {
   const searchTerm = request.query.title;
 
-  console.log('getMetacriticInformation');
   getMetacriticInformation(searchTerm).then(result => {
-    console.log({ result });
     response.status(200).json(result);
   }).catch((error) => {
-    console.log({ error });
     if (error.name === 'FetchError') {
       response.status(400).send('Title query wasn\'t given with request');
     } else {
@@ -122,19 +119,14 @@ const getMetacriticInformation = async (searchTerm) => {
     }
 
     const page = await browser.newPage();
+    const platformNintendoSwitch = '?plats[268409]=1&search_type=advanced';
 
-    await page.goto(`https://www.metacritic.com/search/game/${searchTerm}/results`, { waitUntil: 'load' });
-
+    await page.goto(`https://www.metacritic.com/search/game/${searchTerm}/results${platformNintendoSwitch}`, { waitUntil: 'load' });
     let searchResultsVisible = await page.$('.module.search_results') !== null;
-
-    console.log({ searchResultsVisible });
 
     while (searchResultsVisible) {
       await page.waitForSelector('.search_results.module > .result.first_result');
-
       const gameResults = await page.$$('.search_results.module > .result');
-
-      console.log({ gameResults });
 
       for (const [index, gameResult] of gameResults.entries()) {
         const title = await page.evaluate((element) => element.querySelector('.product_title.basic_stat > a').textContent, gameResult);
@@ -147,16 +139,14 @@ const getMetacriticInformation = async (searchTerm) => {
           pageUrl: url.trim()
         });
         searchResultsVisible = index < (gameResults.length - 1);
-        console.log({ listPageData });
       }
     }
   } catch (error) {
-    console.log(error);
     return error;
   } finally {
-    // if (browser !== null) {
-    //   await browser.close();
-    // }
+    if (browser !== null) {
+      await browser.close();
+    }
   }
   return listPageData;
 };
