@@ -36,8 +36,10 @@ app.get('/metacritic', (request, response) => {
   const searchTerm = request.query.title;
 
   getMetacriticInformation(searchTerm).then(result => {
-    response.status(200).send(result);
+    console.log({ result });
+    response.status(200).json(result);
   }).catch((error) => {
+    console.log({ error });
     if (error.name === 'FetchError') {
       response.status(400).send('Title query wasn\'t given with request');
     } else {
@@ -118,11 +120,11 @@ const getMetacriticInformation = async (searchTerm) => {
           pageUrl: url.trim()
         });
         searchResultsVisible = index < (gameResults.length - 1);
-        console.log({ searchResultsVisible, listPageData });
+        // console.log({ searchResultsVisible, listPageData });
       }
     }
     await browser.close();
-    return await JSON.parse(JSON.stringify(listPageData));
+    return listPageData;
   } catch (error) {
     console.log(error);
   }
