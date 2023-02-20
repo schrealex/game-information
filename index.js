@@ -45,6 +45,8 @@ app.get('/how-long-to-beat', (request, response) => {
 app.get('/metacritic', (request, response) => {
   const searchTerm = request.query.title;
 
+  response.setHeader("Access-Control-Allow-Origin", "*");
+
   getMetacriticInformation(searchTerm).then(result => {
     response.status(200).json(result);
   }).catch((error) => {
