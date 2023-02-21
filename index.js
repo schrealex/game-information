@@ -44,10 +44,11 @@ app.get('/how-long-to-beat', (request, response) => {
 
 app.get('/metacritic', (request, response) => {
   const searchTerm = request.query.title;
+  const type = request.query.type;
 
-  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.set('Access-Control-Allow-Origin', '*');
 
-  getMetacriticInformation(searchTerm).then(result => {
+  getMetacriticInformation(searchTerm, type).then(result => {
     response.status(200).json(result);
   }).catch((error) => {
     if (error.name === 'FetchError') {
@@ -103,7 +104,7 @@ const getHLTBInformation = async (searchTerm, year) => {
   return await response.json();
 };
 
-const getMetacriticInformation = async (searchTerm) => {
+const getMetacriticInformation = async (searchTerm, type) => {
   let browser = null;
   const listPageData = [];
 
@@ -121,12 +122,25 @@ const getMetacriticInformation = async (searchTerm) => {
     }
 
     const page = await browser.newPage();
-    const platformNintendoSwitch = '?plats[268409]=1&search_type=advanced';
+    let metacriticURL = `https://www.metacritic.com/search/game/${searchTerm}/results`;
+    if (type === 'BACKLOG') {
+      const platformNintendoSwitch = '?plats[268409]=1&search_type=advanced';
+      metacriticURL += platformNintendoSwitch;
+    }
 
-    await page.goto(`https://www.metacritic.com/search/game/${searchTerm}/results${platformNintendoSwitch}`, { waitUntil: 'load' });
+    await page.goto(metacriticURL, { waitUntil: 'load' });
     let searchResultsVisible = await page.$('.module.search_results') !== null;
 
     while (searchResultsVisible) {
+      const element = await page.$('[class="body"] > p');
+      if (element) {
+        const text =  await (await element.getProperty('textContent')).jsonValue()
+        if (text === 'Enter your search term in the search bar above.') {
+          console.log(`No search results found for ${searchTerm}`);
+          break;
+        }
+      }
+
       await page.waitForSelector('.search_results.module > .result.first_result');
       const gameResults = await page.$$('.search_results.module > .result');
 
