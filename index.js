@@ -41,7 +41,6 @@ app.get('/how-long-to-beat', (request, response) => {
   });
 });
 
-
 app.get('/metacritic', (request, response) => {
   const searchTerm = request.query.title;
   const type = request.query.type;
@@ -50,6 +49,18 @@ app.get('/metacritic', (request, response) => {
 
   getMetacriticInformation(searchTerm, type).then(result => {
     response.status(200).json(result);
+  }).catch((error) => {
+    if (error.name === 'FetchError') {
+      response.status(400).send('Title query wasn\'t given with request');
+    } else {
+      response.status(500).send(error);
+    }
+  });
+});
+
+app.get('/nsg-reviews', (request, response) => {
+  getNSGReviewsInformation(request.query.title).then(result => {
+    response.status(200).send(result);
   }).catch((error) => {
     if (error.name === 'FetchError') {
       response.status(400).send('Title query wasn\'t given with request');
@@ -165,4 +176,9 @@ const getMetacriticInformation = async (searchTerm, type) => {
     }
   }
   return listPageData;
+};
+
+const getNSGReviewsInformation = async (searchTerm, year) => {
+  const response = await fetch(`https://www.nsgreviews.com/list/query?search=${searchTerm}&sort=release_date&dir=asc&notuser=true`);
+  return await response.json();
 };
