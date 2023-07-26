@@ -58,9 +58,27 @@ app.get('/metacritic', (request, response) => {
   });
 });
 
+app.get('/nsg-reviews-status', (request, response) => {
+  checkNSGReviewsStatus().then(result => {
+    if( result.status === 200) {
+      response.status(200).send(result);
+    } else if (result.status === 503) {
+      response.status(500).send('NSG Reviews is unavailable');
+    } else {
+      response.status(500).send('Someting went wrong');
+    }
+  }).catch((error) => {
+    if (error.name === 'FetchError') {
+      response.status(400).send('Title query wasn\'t given with request');
+    } else {
+      response.status(500).send(error);
+    }
+  });
+});
+
 app.get('/nsg-reviews', (request, response) => {
   getNSGReviewsInformation(request.query.title).then(result => {
-    response.status(200).send(result);
+      response.status(200).send(result);
   }).catch((error) => {
     if (error.name === 'FetchError') {
       response.status(400).send('Title query wasn\'t given with request');
@@ -178,7 +196,11 @@ const getMetacriticInformation = async (searchTerm, type) => {
   return listPageData;
 };
 
-const getNSGReviewsInformation = async (searchTerm, year) => {
+const checkNSGReviewsStatus = async () => {
+  return await fetch(`https://www.nsgreviews.com`);
+};
+
+const getNSGReviewsInformation = async (searchTerm) => {
   const response = await fetch(`https://www.nsgreviews.com/list/query?search=${searchTerm}&sort=release_date&dir=asc&notuser=true`);
   return await response.json();
 };
