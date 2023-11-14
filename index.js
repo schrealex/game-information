@@ -147,7 +147,7 @@ const getMetacriticInformation = async (searchTerm) => {
           ignoreHTTPSErrors: true,
         });
       } else {
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch();
       }
 
       const page = await browser.newPage();
