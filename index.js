@@ -143,11 +143,11 @@ const getMetacriticInformation = async (searchTerm) => {
           args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath,
-          headless: true,
+          headless: 'new',
           ignoreHTTPSErrors: true,
         });
       } else {
-        browser = await puppeteer.launch();
+        browser = await puppeteer.launch({ headless: 'new' });
       }
 
       const page = await browser.newPage();
