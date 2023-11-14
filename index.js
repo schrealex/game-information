@@ -157,14 +157,14 @@ const getMetacriticInformation = async (searchTerm) => {
       await page.goto(metacriticURL);
 
       try {
-        const textSelector = await page.waitForSelector('text/No Results Found', { timeout: 200 });
+        const textSelector = await page.waitForSelector('text/No Results Found', { timeout: 250 });
         const noResultsFound = await textSelector?.evaluate(el => el.textContent);
         if (noResultsFound) {
           metacriticResults.push(`No results found for ${searchTerm}`);
         }
       } catch (error) {
         if (error.name === 'TimeoutError') {
-          const element =  await page.waitForSelector('.c-pageSiteSearch-results', { timeout: 100 });
+          const element =  await page.waitForSelector('.c-pageSiteSearch-results', { timeout: 250 });
           if (element) {
 
             // For debugging purposes
