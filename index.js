@@ -43,11 +43,10 @@ app.get('/how-long-to-beat', (request, response) => {
 
 app.get('/metacritic', (request, response) => {
   const searchTerm = request.query.title;
-  const type = request.query.type;
 
   response.set('Access-Control-Allow-Origin', '*');
 
-  getMetacriticInformation(searchTerm, type).then(result => {
+  getMetacriticInformation(searchTerm).then(result => {
     response.status(200).json(result);
   }).catch((error) => {
     if (error.name === 'FetchError') {
@@ -133,67 +132,80 @@ const getHLTBInformation = async (searchTerm, year) => {
   return await response.json();
 };
 
-const getMetacriticInformation = async (searchTerm, type) => {
+const getMetacriticInformation = async (searchTerm) => {
   let browser = null;
-  const listPageData = [];
+  let metacriticResults = [];
 
-  try {
-    if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
-      browser = await puppeteer.launch({
-        args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath,
-        headless: true,
-        ignoreHTTPSErrors: true,
-      });
-    } else {
-      browser = await puppeteer.launch();
-    }
+  await (async () => {
+    try {
+      if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+        browser = await puppeteer.launch({
+          args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath,
+          headless: true,
+          ignoreHTTPSErrors: true,
+        });
+      } else {
+        browser = await puppeteer.launch({ headless: true });
+      }
 
-    const page = await browser.newPage();
-    let metacriticURL = `https://www.metacritic.com/search/game/${searchTerm}/results`;
-    if (type === 'BACKLOG') {
-      const platformNintendoSwitch = '?plats[268409]=1&search_type=advanced';
-      metacriticURL += platformNintendoSwitch;
-    }
+      const page = await browser.newPage();
+      let metacriticURL = `https://www.metacritic.com/search/${searchTerm}`;
+      console.log(`Get Metacritic information with url: ${metacriticURL}`);
 
-    await page.goto(metacriticURL, { waitUntil: 'load' });
-    let searchResultsVisible = await page.$('.module.search_results') !== null;
+      await page.goto(metacriticURL);
 
-    while (searchResultsVisible) {
-      const element = await page.$('[class="body"] > p');
-      if (element) {
-        const text =  await (await element.getProperty('textContent')).jsonValue()
-        if (text === 'Enter your search term in the search bar above.') {
-          console.log(`No search results found for ${searchTerm}`);
-          break;
+      try {
+        const textSelector = await page.waitForSelector('text/No Results Found', { timeout: 200 });
+        const noResultsFound = await textSelector?.evaluate(el => el.textContent);
+        if (noResultsFound) {
+          metacriticResults.push(`No results found for ${searchTerm}`);
+        }
+      } catch (error) {
+        if (error.name === 'TimeoutError') {
+          const element =  await page.waitForSelector('.c-pageSiteSearch-results', { timeout: 100 });
+          if (element) {
+
+            // For debugging purposes
+            // page.on('console', async (message) => {
+            //   const messageArguments = message.args();
+            //   for (let i = 0; i < messageArguments.length; ++i) {
+            //     console.log(await messageArguments[i].jsonValue());
+            //   }
+            // });
+
+            metacriticResults = await page.evaluate( (searchTerm) => {
+              const searchResults = [];
+              const searchResultsElements = document.querySelector('.c-pageSiteSearch-results').children[1].querySelectorAll('.g-grid-container');
+              for (let i = 0; searchResultsElements[i]; i++) {
+                const elementText = searchResultsElements[i].textContent;
+                // console.log({ searchTerm, title: elementText.trim().split('\n')[0] });
+                // if (elementText.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()) && elementText.includes('game')) { // All results containing the search term and are games
+                if (elementText.trim().split('\n')[0].toLocaleLowerCase()  === searchTerm.toLocaleLowerCase() && elementText.includes('game')) { // All results with the exact search term and is a game
+                  const title = searchResultsElements[i].querySelector('.g-grid-container .u-grid-columns a .u-text-overflow-ellipsis p').textContent.trim();
+                  const score = searchResultsElements[i].querySelector('.c-siteReviewScore span').textContent;
+                  const url = searchResultsElements[i].querySelector('.g-grid-container .u-grid-columns a').href;
+
+                  searchResults.push({ title, score, url });
+                }
+              }
+              return searchResults;
+            }, searchTerm);
+          }
+        } else {
+          metacriticResults.push(error)
         }
       }
-
-      await page.waitForSelector('.search_results.module > .result.first_result');
-      const gameResults = await page.$$('.search_results.module > .result');
-
-      for (const [index, gameResult] of gameResults.entries()) {
-        const title = await page.evaluate((element) => element.querySelector('.product_title.basic_stat > a').textContent, gameResult);
-        const metacriticScore = await page.evaluate((element) => element.querySelector('.metascore_w').textContent, gameResult);
-        const url = await page.evaluate((element) => element.querySelector('.product_title.basic_stat a[href]').href, gameResult);
-
-        listPageData.push({
-          title: title.trim(),
-          metacriticScore: metacriticScore.trim(),
-          pageUrl: url.trim()
-        });
-        searchResultsVisible = index < (gameResults.length - 1);
+    } catch (error) {
+      return error;
+    } finally {
+      if (browser !== null) {
+        await browser.close();
       }
     }
-  } catch (error) {
-    return error;
-  } finally {
-    if (browser !== null) {
-      await browser.close();
-    }
-  }
-  return listPageData;
+  })();
+  return metacriticResults;
 };
 
 const checkNSGReviewsStatus = async () => {
