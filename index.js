@@ -62,7 +62,7 @@ app.get('/nsg-reviews-status', (request, response) => {
     if( result.status === 200) {
       response.status(200).send(result);
     } else if (result.status === 503) {
-      response.status(500).send({ error: 'NSG Reviews is unavailable' });
+      response.status(503).send({ error: 'NSG Reviews is unavailable' });
     } else {
       response.status(500).send({ error: 'Someting went wrong' });
     }
