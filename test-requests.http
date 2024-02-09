@@ -1,0 +1,14 @@
+###
+GET http://localhost:3000/metacritic?title=Outlast%202
+Origin: http://localhost:3000
+Content-Type: application/json
+
+###
+GET http://localhost:3000/metacritic?title=Quake II
+Origin: http://localhost:3000
+Content-Type: application/json
+
+###
+GET http://localhost:3000/metacritic?title=Vengeful Guardian: Moonrider
+Origin: http://localhost:3000
+Content-Type: application/json
