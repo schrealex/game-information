@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 
+const querystring= require('querystring');
+
 const { firestore } = require('./firebaseConfig');
 const { collection, getDocs, query, where } = require('firebase/firestore/lite');
 
@@ -21,12 +23,26 @@ const port = 3000;
 
 app.use(cors());
 
-app.get('/', (request, response) => {
+app.get('/', (request) => {
   request.send('Game Information API');
 });
 
 app.listen(port, () => {
   console.log(`Server running on ${port}, http://localhost:${port}`);
+});
+
+app.get('/search-game', (request, response) => {
+  const title = request.query.title;
+  searchGame(title).then(result => {
+    const foundGames = result.response.docs.filter(game => game.title.toLowerCase().includes(title.toLowerCase()));
+    if (foundGames.length > 0) {
+      response.status(200).send(foundGames);
+    } else {
+      response.status(404).send('Game not found');
+    }
+  }).catch((error) => {
+    response.status(500).send(error);
+  });
 });
 
 app.get('/how-long-to-beat', (request, response) => {
@@ -109,6 +125,25 @@ const getRandomBacklogGame  = async () => {
 
   return { ...randomDocument.data(), documentId: randomDocument.id };
 }
+
+const searchGame = async (title) => {
+  const EU_GET_GAMES_URL = 'http://search.nintendo-europe.com/en/select';
+  const EU_GET_GAMES_OPTIONS = {
+    fq: 'type:GAME AND system_type:nintendoswitch*',
+    q: title,
+    sort: 'sorting_title asc',
+    start: '0',
+    wt: 'json'
+  };
+
+  const url = `${EU_GET_GAMES_URL}?${querystring.stringify({
+    rows: 500,
+    ...EU_GET_GAMES_OPTIONS
+  })}`;
+
+  const gamesData = await fetch(url);
+  return gamesData.json();
+};
 
 const getHLTBInformation = async (title, year) => {
   const response = await fetch(`https://www.howlongtobeat.com/api/search`, {
