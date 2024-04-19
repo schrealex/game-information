@@ -34,15 +34,15 @@ app.listen(port, () => {
 app.get('/search-game', (request, response) => {
   const title = request.query.title;
   searchGame(title).then(result => {
-    const foundGames = result.response.docs.filter(game => game.title.toLowerCase().includes(title.toLowerCase())).map(game => {
-        return {
-            title: game.title,
-            id: game.nsuid_txt[0],
-            image: game.wishlist_email_banner640w_image_url_s,
-        };
-    })
+    const foundGames = result.response.docs.filter(game =>  game.title.toLowerCase().includes(title.toLowerCase()) && game.nsuid_txt);
     if (foundGames.length > 0) {
-      response.status(200).send(foundGames);
+      response.status(200).send(foundGames.map(game => {
+        return {
+          title: game.title,
+          id: game.nsuid_txt[0],
+          image: game.wishlist_email_banner640w_image_url_s,
+        };
+      }));
     } else {
       response.status(404).send('Game not found');
     }
