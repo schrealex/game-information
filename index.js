@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const UserAgent = require('user-agents');
 
 const querystring= require('querystring');
 
@@ -152,46 +153,54 @@ const searchGame = async (title) => {
 };
 
 const getHLTBInformation = async (title, year) => {
-  const response = await fetch(`https://www.howlongtobeat.com/api/search`, {
+  const headers = new Headers();
+  headers.append('User-Agent', new UserAgent().toString());
+  headers.append("Origin", "https://howlongtobeat.com/");
+  headers.append("Referer", "https://howlongtobeat.com/");
+  headers.append("Content-Type", "application/json");
+
+  const requestBody = JSON.stringify({
+    'searchType': 'games',
+    'searchTerms': [title],
+    'searchPage': 1,
+    'size': 20,
+    'searchOptions': {
+      'games': {
+        'userId': 0,
+        'platform': '',
+        'sortCategory': 'popular',
+        'rangeCategory': 'main',
+        'rangeTime': {
+          'min': null,
+          'max': null
+        },
+        rangeYear: {
+          min: [year],
+          max: [year]
+        },
+        'gameplay': {
+          'perspective': '',
+          'flow': '',
+          'genre': ''
+        },
+        'modifier': ''
+      },
+      'users': {
+        'sortCategory': 'postcount'
+      },
+      'lists': {
+        'sortCategory': 'follows'
+      },
+      'filter': '',
+      'sort': 0,
+      'randomizer': 0
+    }
+  });
+
+  const response = await fetch(`https://howlongtobeat.com/api/search`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Referer': 'https://howlongtobeat.com/',
-    },
-    body: JSON.stringify({
-      'searchType': 'games',
-      'searchTerms': [title],
-      'searchPage': 1,
-      'size': 20,
-      'searchOptions': {
-        'games': {
-          'userId': 0,
-          'platform': '',
-          'sortCategory': 'popular',
-          'rangeCategory': 'main',
-          'rangeTime': {
-            'min': 0,
-            'max': 0
-          },
-          rangeYear: {
-            min: [year],
-            max: [year]
-          },
-          'gameplay': {
-            'perspective': '',
-            'flow': '',
-            'genre': ''
-          },
-          'modifier': ''
-        },
-        'users': {
-          'sortCategory': 'postcount'
-        },
-        'filter': '',
-        'sort': 0,
-        'randomizer': 0
-      }
-    })
+    headers,
+    body: requestBody,
   });
   return await response.json();
 };
